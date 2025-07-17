@@ -1,0 +1,452 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Brain, Clock, Target, RotateCcw, CheckCircle, XCircle, BookOpen, Lightbulb } from 'lucide-react';
+import GeminiChatbot from './GeminiChatbot';
+import ThemeToggle from './ThemeToggle';
+
+interface Flashcard {
+  id: string;
+  question: string;
+  answer: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  category: string;
+}
+
+interface StudyQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+interface StudySession {
+  id: string;
+  title: string;
+  summary: string;
+  keyTopics: string[];
+  flashcards: Flashcard[];
+  questions: StudyQuestion[];
+  estimatedStudyTime: number;
+}
+
+interface StudySessionComponentProps {
+  studySession: StudySession;
+  onBack: () => void;
+}
+
+type StudyMode = 'overview' | 'flashcards' | 'quiz' | 'results';
+
+interface StudyProgress {
+  flashcardsCompleted: number;
+  questionsAnswered: number;
+  correctAnswers: number;
+  startTime: Date;
+}
+
+export default function StudySessionComponent({ studySession, onBack }: StudySessionComponentProps) {
+  const [currentMode, setCurrentMode] = useState<StudyMode>('overview');
+  const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
+  const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [showQuestionResult, setShowQuestionResult] = useState(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
+  
+  const [progress, setProgress] = useState<StudyProgress>({
+    flashcardsCompleted: 0,
+    questionsAnswered: 0,
+    correctAnswers: 0,
+    startTime: new Date()
+  });
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'easy': return 'text-green-600 bg-green-100';
+      case 'medium': return 'text-yellow-600 bg-yellow-100';
+      case 'hard': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const handleFlashcardNext = () => {
+    if (!showFlashcardAnswer) {
+      setShowFlashcardAnswer(true);
+    } else {
+      if (currentFlashcardIndex < studySession.flashcards.length - 1) {
+        setCurrentFlashcardIndex(currentFlashcardIndex + 1);
+        setShowFlashcardAnswer(false);
+        setProgress(prev => ({
+          ...prev,
+          flashcardsCompleted: prev.flashcardsCompleted + 1
+        }));
+      } else {
+        setCurrentMode('quiz');
+      }
+    }
+  };
+  const handleQuestionAnswer = (answerIndex: number) => {
+    if (showQuestionResult) return; // Prevent multiple clicks after result is shown
+    
+    setSelectedAnswer(answerIndex);
+    
+    // Don't show result immediately, wait for user to confirm or add a small delay
+    setTimeout(() => {
+      setShowQuestionResult(true);
+      
+      const isCorrect = answerIndex === studySession.questions[currentQuestionIndex].correctAnswer;
+      setProgress(prev => ({
+        ...prev,
+        questionsAnswered: prev.questionsAnswered + 1,
+        correctAnswers: prev.correctAnswers + (isCorrect ? 1 : 0)
+      }));
+    }, 500); // Half second delay to let user see their selection
+  };
+
+  const handleQuestionNext = () => {
+    if (currentQuestionIndex < studySession.questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setSelectedAnswer(null);
+      setShowQuestionResult(false);
+    } else {
+      setCurrentMode('results');
+    }
+  };
+
+  const resetSession = () => {
+    setCurrentMode('overview');
+    setCurrentFlashcardIndex(0);
+    setCurrentQuestionIndex(0);
+    setShowFlashcardAnswer(false);
+    setSelectedAnswer(null);
+    setShowQuestionResult(false);
+    setProgress({
+      flashcardsCompleted: 0,
+      questionsAnswered: 0,
+      correctAnswers: 0,
+      startTime: new Date()
+    });
+  };
+  const renderOverview = () => (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-300">{studySession.title}</h1>
+        <div className="flex items-center justify-center space-x-4 text-sm text-gray-600 dark:text-gray-300 transition-colors duration-300">
+          <div className="flex items-center space-x-1">
+            <Clock className="w-4 h-4" />
+            <span>{studySession.estimatedStudyTime} min</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <BookOpen className="w-4 h-4" />
+            <span>{studySession.flashcards.length} flashcards</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <Target className="w-4 h-4" />
+            <span>{studySession.questions.length} preguntas</span>
+          </div>
+        </div>
+      </div>      {/* Summary */}
+      <div className="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6 border border-blue-200 dark:border-blue-700 transition-colors duration-300">
+        <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-3 transition-colors duration-300">📝 Resumen del Contenido</h3>
+        <p className="text-blue-800 dark:text-blue-200 leading-relaxed transition-colors duration-300">{studySession.summary}</p>
+      </div>
+
+      {/* Key Topics */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 transition-colors duration-300">🎯 Temas Clave</h3>        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {studySession.keyTopics.map((topic, index) => (
+            <div key={index} className="bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 px-3 py-2 rounded-lg text-center font-medium transition-colors duration-300">
+              {topic}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Study Options */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <button
+          onClick={() => setCurrentMode('flashcards')}
+          className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white p-6 rounded-xl transition-colors group"
+        >
+          <div className="text-center">
+            <Brain className="w-12 h-12 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+            <h4 className="text-xl font-semibold mb-2">Estudiar con Flashcards</h4>
+            <p className="text-green-100 dark:text-green-200">Repasa conceptos clave con tarjetas interactivas</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => setCurrentMode('quiz')}
+          className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white p-6 rounded-xl transition-colors group"
+        >
+          <div className="text-center">
+            <Target className="w-12 h-12 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+            <h4 className="text-xl font-semibold mb-2">Tomar Quiz</h4>
+            <p className="text-purple-100 dark:text-purple-200">Evalúa tu comprensión con preguntas</p>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderFlashcards = () => {
+    const currentCard = studySession.flashcards[currentFlashcardIndex];
+    
+    return (
+      <div className="space-y-6">        {/* Progress */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setCurrentMode('overview')}
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors duration-300"
+          >
+            ← Volver al inicio
+          </button>
+          <span className="text-sm text-gray-600 dark:text-gray-300 transition-colors duration-300">
+            {currentFlashcardIndex + 1} de {studySession.flashcards.length} flashcards
+          </span>
+        </div>
+
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 min-h-[400px] relative transition-colors duration-300">
+            {/* Card Header */}
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
+              <div className="flex items-center justify-between">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(currentCard.difficulty)}`}>
+                  {currentCard.difficulty}
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">{currentCard.category}</span>
+              </div>
+            </div>            {/* Card Content */}
+            <div className="p-8">
+              {!showFlashcardAnswer ? (
+                <div className="text-center">
+                  <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6 transition-colors duration-300">
+                    {currentCard.question}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-8 transition-colors duration-300">Piensa en la respuesta y luego haz clic para revelarla</p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-4 transition-colors duration-300">Respuesta:</h3>
+                  <p className="text-lg text-gray-900 dark:text-gray-100 leading-relaxed transition-colors duration-300">
+                    {currentCard.answer}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Card Actions */}
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 transition-colors duration-300">
+              <button
+                onClick={handleFlashcardNext}
+                className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold transition-colors"
+              >
+                {!showFlashcardAnswer ? 'Mostrar Respuesta' : 
+                 currentFlashcardIndex < studySession.flashcards.length - 1 ? 'Siguiente Flashcard' : 'Ir al Quiz'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderQuiz = () => {
+    const currentQuestion = studySession.questions[currentQuestionIndex];
+    
+    return (      <div className="space-y-6">
+        {/* Progress */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setCurrentMode('overview')}
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors duration-300"
+          >
+            ← Volver al inicio
+          </button>
+          <span className="text-sm text-gray-600 dark:text-gray-300 transition-colors duration-300">
+            Pregunta {currentQuestionIndex + 1} de {studySession.questions.length}
+          </span>
+        </div>
+
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+            {/* Question Header */}
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
+              <div className="flex items-center justify-between">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(currentQuestion.difficulty)}`}>
+                  {currentQuestion.difficulty}
+                </span>
+                <div className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
+                  {progress.correctAnswers}/{progress.questionsAnswered} correctas
+                </div>
+              </div>
+            </div>            {/* Question Content */}
+            <div className="p-8">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 transition-colors duration-300">
+                {currentQuestion.question}
+              </h3>
+              
+              {!selectedAnswer && !showQuestionResult && (
+                <p className="text-gray-600 dark:text-gray-300 mb-6 italic transition-colors duration-300">
+                  💡 Selecciona la respuesta que consideres correcta:
+                </p>
+              )}
+              
+              <div className="space-y-4">
+                {currentQuestion.options.map((option, index) => (
+                  <button
+                    key={index}
+                    onClick={() => !showQuestionResult && handleQuestionAnswer(index)}
+                    disabled={showQuestionResult}
+                    className={`w-full p-4 text-left rounded-lg border-2 transition-all duration-200 ${
+                      showQuestionResult
+                        ? index === currentQuestion.correctAnswer
+                          ? 'bg-green-100 dark:bg-green-900/40 border-green-500 dark:border-green-400 text-green-800 dark:text-green-300 shadow-lg'
+                          : selectedAnswer === index
+                          ? 'bg-red-100 dark:bg-red-900/40 border-red-500 dark:border-red-400 text-red-800 dark:text-red-300 shadow-lg'
+                          : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300'                        : selectedAnswer === index
+                        ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-500 dark:border-blue-400 text-blue-900 dark:text-blue-300 shadow-md transform scale-105'
+                        : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md text-gray-800 dark:text-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className={`font-bold text-lg ${
+                        selectedAnswer === index && !showQuestionResult 
+                          ? 'text-blue-600 dark:text-blue-400' 
+                          : showQuestionResult && index === currentQuestion.correctAnswer
+                          ? 'text-green-600 dark:text-green-400'
+                          : showQuestionResult && selectedAnswer === index && index !== currentQuestion.correctAnswer
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-gray-500 dark:text-gray-400'
+                      }`}>
+                        {String.fromCharCode(65 + index)}.
+                      </span>
+                      <span className="flex-1">{option}</span>
+                      {showQuestionResult && index === currentQuestion.correctAnswer && (
+                        <CheckCircle className="w-6 h-6 text-green-600 ml-auto" />
+                      )}
+                      {showQuestionResult && selectedAnswer === index && index !== currentQuestion.correctAnswer && (
+                        <XCircle className="w-6 h-6 text-red-600 ml-auto" />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>              {selectedAnswer !== null && !showQuestionResult && (
+                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700 transition-colors duration-300">
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>
+                    <p className="text-blue-800 dark:text-blue-200 font-medium transition-colors duration-300">
+                      Procesando tu respuesta...
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {showQuestionResult && (
+                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700 transition-colors duration-300">
+                  <div className="flex items-start space-x-2">
+                    <Lightbulb className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 transition-colors duration-300" />
+                    <div>
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-300 transition-colors duration-300">Explicación:</h4>
+                      <p className="text-blue-800 dark:text-blue-200 transition-colors duration-300">{currentQuestion.explanation}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>            {/* Question Actions */}
+            {showQuestionResult && (
+              <div className="p-6 border-t border-gray-200 dark:border-gray-700 transition-colors duration-300">
+                <button
+                  onClick={handleQuestionNext}
+                  className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold transition-colors"
+                >
+                  {currentQuestionIndex < studySession.questions.length - 1 ? 'Siguiente Pregunta' : 'Ver Resultados'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+  const renderResults = () => {
+    const score = Math.round((progress.correctAnswers / studySession.questions.length) * 100);
+    const studyTimeMinutes = Math.round((Date.now() - progress.startTime.getTime()) / 60000);
+    
+    return (
+      <div className="space-y-6 text-center">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8 transition-colors duration-300">
+            <div className="text-6xl mb-4">
+              {score >= 80 ? '🎉' : score >= 60 ? '👍' : '📚'}
+            </div>
+            
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-300">
+              ¡Sesión Completada!
+            </h2>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-8">
+              <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg transition-colors duration-300">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 transition-colors duration-300">{score}%</div>
+                <div className="text-sm text-blue-800 dark:text-blue-300 transition-colors duration-300">Puntuación</div>
+              </div>
+              <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg transition-colors duration-300">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400 transition-colors duration-300">{progress.correctAnswers}</div>
+                <div className="text-sm text-green-800 dark:text-green-300 transition-colors duration-300">Correctas</div>
+              </div>
+              <div className="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-lg transition-colors duration-300">
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 transition-colors duration-300">{studySession.flashcards.length}</div>
+                <div className="text-sm text-purple-800 dark:text-purple-300 transition-colors duration-300">Flashcards</div>
+              </div>
+              <div className="bg-orange-50 dark:bg-orange-900/30 p-4 rounded-lg transition-colors duration-300">
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 transition-colors duration-300">{studyTimeMinutes}</div>
+                <div className="text-sm text-orange-800 dark:text-orange-300 transition-colors duration-300">Minutos</div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <button
+                onClick={resetSession}
+                className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2"
+              >
+                <RotateCcw className="w-5 h-5" />
+                <span>Estudiar de Nuevo</span>
+              </button>
+                <button
+                onClick={onBack}
+                className="w-full bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white py-3 px-6 rounded-lg font-semibold transition-colors"
+              >
+                Subir Otro Documento
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4 transition-colors duration-300">
+      {/* Theme Toggle */}
+      <div className="fixed top-6 right-6 z-40">
+        <ThemeToggle />
+      </div>
+
+      <div className="max-w-6xl mx-auto py-8">
+        {currentMode === 'overview' && renderOverview()}
+        {currentMode === 'flashcards' && renderFlashcards()}
+        {currentMode === 'quiz' && renderQuiz()}
+        {currentMode === 'results' && renderResults()}
+      </div>
+      
+      {/* Gemini AI Chatbot */}
+      <GeminiChatbot
+        isOpen={isChatbotOpen}
+        onToggle={() => setIsChatbotOpen(!isChatbotOpen)}
+        studyContext={studySession.summary}
+        studyTitle={studySession.title}
+      />
+    </div>
+  );
+}
