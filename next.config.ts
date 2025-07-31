@@ -1,14 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Configuración mínima para Vercel
+  // Configuración para dominio personalizado
+  trailingSlash: false,
+  
+  // Configuración para dominio sin www
   images: {
-    unoptimized: true
+    unoptimized: true,
+    domains: ['estudiarcontdha.site'],
   },
   
-  // Variables de entorno
+  // Variables de entorno actualizadas
   env: {
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    NEXT_PUBLIC_SITE_URL: 'https://estudiarcontdha.site',
   },
   
   // Configuración para pdf-parse y compatibilidad con Vercel (nueva sintaxis)

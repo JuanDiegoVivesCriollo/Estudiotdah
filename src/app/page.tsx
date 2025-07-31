@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import FileUploader from '@/components/FileUploader';
 import ProcessedDocument from '@/components/ProcessedDocument';
 import GeminiChatbot from '@/components/GeminiChatbot';
@@ -54,9 +55,26 @@ export default function Home() {
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-300">
               <span className="text-blue-600 dark:text-blue-400">Estudio</span>TDAH
             </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto transition-colors duration-300">
-              Convierte tus documentos en material de estudio optimizado con técnica de anclaje visual
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto transition-colors duration-300 mb-4">
+              Convierte tus documentos en material de estudio optimizado con la técnica lectura bionica para un mayor enfoque y comprensión.
+              También puedes crear sesiones de estudio con IA para mejorar tu aprendizaje.
             </p>
+            
+            {/* Navegación */}
+            <nav className="flex justify-center space-x-6 mt-4">
+              <Link 
+                href="/sobre-nosotros"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors duration-200"
+              >
+                Sobre la aplicación
+              </Link>
+              <Link 
+                href="/como-funciona"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors duration-200"
+              >
+                Cómo Funciona
+              </Link>
+            </nav>
           </div>
         </div>
       </header>
@@ -423,10 +441,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h3 className="text-2xl font-bold mb-4">EstudioTDAH</h3>
           <p className="text-gray-400 mb-4">
-            Herramienta diseñada con amor para estudiantes con TDAH
+            Herramienta diseñada con mucho amor para mi hermosa mujer, Ashly ❤️
           </p>
           <p className="text-gray-500 text-sm">
-            © 2025 EstudioTDAH. Mejorando la experiencia de aprendizaje.
+            © 2025 EstudioTDAH.
           </p>
         </div>
       </footer>

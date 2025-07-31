@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://estudiarcontdha.site/sitemap.xml
+
+# Bloquear APIs privadas
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/
+
+# Permitir indexación de páginas principales
+Allow: /
+Allow: /sobre-nosotros
+Allow: /como-funciona

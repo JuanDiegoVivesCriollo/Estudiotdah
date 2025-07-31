@@ -79,6 +79,19 @@ body {
   }
 }
 
+/* Animación tilt para la foto */
+@keyframes tilt {
+  0%, 50%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(1deg);
+  }
+  75% {
+    transform: rotate(-1deg);
+  }
+}
+
 /* Clases de animación */
 .animate-fadeInLeft {
   animation: fadeInLeft 0.8s ease-out forwards;
@@ -98,6 +111,10 @@ body {
 
 .animate-pulseRing {
   animation: pulseRing 1.25s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+}
+
+.animate-tilt {
+  animation: tilt 3s ease-in-out infinite;
 }
 
 /* Efectos de hover mejorados */
@@ -129,5 +146,52 @@ body {
   }
   100% {
     left: 100%;
+  }
+}
+
+/* Scrollbar personalizado para el chatbot */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Scrollbar para tema oscuro */
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Asegurar que el contenedor del chat tenga altura apropiada */
+.chat-container {
+  height: 100vh;
+  max-height: 100vh;
+}
+
+@media (min-width: 640px) {
+  .chat-container {
+    height: 32rem;
+    max-height: 32rem;
   }
 }
